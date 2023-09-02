@@ -1,10 +1,26 @@
-testing
-testing testing
-volume one
-testing 1 2 3
-end end
-end end
-and and
-end
-hello iris
-go to sleep
+User: say hello
+Iris: hello, how are you?
+User: say hello
+Iris: hello, how are you?
+User: go to sleep
+Iris: going to sleep
+User: say hello
+Iris: hello, how are you?
+User: go to sleep
+Iris: going to sleep
+User: iris
+Iris: I do not know that command yet
+User: say hello
+Iris: hello, how are you?
+User: say hello
+Iris: hello, how are you?
+User: how are you
+Iris: fine, thank you
+User: go to sleep
+Iris: going to sleep
+User: what's the weather like
+Iris: I do not know that command yet
+User: explain my surroundings
+Iris: I do not know that command yet
+User: go to sleep
+Iris: going to sleep
