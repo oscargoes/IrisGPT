@@ -5,6 +5,7 @@ import cv2 as cv
 import os
 from dotenv import load_dotenv
 import openai
+import http.client, urllib.request, urllib.parse, urllib.error, base64
 
 # Initialize globals and Python TTS engine
 engine = pyttsx3.init()
@@ -21,6 +22,17 @@ is_listening = False
 # Initialize OpenAI
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
+
+headers = {
+    # Request headers
+    'Content-Type': 'application/json',
+    'Ocp-Apim-Subscription-Key': os.getenv("AZURE_AI_KEY"),
+}
+
+params = urllib.parse.urlencode({
+    # Request parameters
+    'model-version': '{string}',
+})
 
 # Wait to hear wake word and listen for command when wake detected
 def hear(rec, audio):
@@ -75,7 +87,15 @@ def interpret(text):
         speak = "fine, thank you"
         f.write("Iris: " + speak + "\n")
     else:
-        
+        # try:
+        #     conn = http.client.HTTPSConnection('*.cognitiveservices.azure.com')
+        #     conn.request("POST", "/computervision/retrieval:vectorizeImage?api-version=2023-04-01-preview&%s" % params, "{body}", headers)
+        #     response = conn.getresponse()
+        #     data = response.read()
+        #     print(data)
+        #     conn.close()
+        # except Exception as e:
+        #     print("[Errno {0}] {1}".format(e.errno, e.strerror))
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
