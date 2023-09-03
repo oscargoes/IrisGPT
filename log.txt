@@ -24,3 +24,43 @@ User: explain my surroundings
 Iris: I do not know that command yet
 User: go to sleep
 Iris: going to sleep
+User: say hello hello hello iris iris
+Iris: I do not know that command yet
+User: say hello
+Iris: hello, how are you?
+User: what's the weather like
+Iris: I do not know that command yet
+User: go to sleep go to sleep
+Iris: I do not know that command yet
+User: go to sleep
+Iris: going to sleep
+User: what's the weather like
+Iris: I do not know that command yet
+User: how are you
+Iris: fine, thank you
+User: go to sleep
+Iris: going to sleep
+User: how are you
+Iris: fine, thank you
+User: go to sleep
+Iris: going to sleep
+User: go to sleep
+Iris: going to sleep
+User: how are you
+Iris: fine, thank you
+User: say hello
+Iris: hello, how are you?
+User: what's the weather like
+Iris: I do not know that command yet
+User: what's in front of me
+Iris: I do not know that command yet
+User: go to sleep
+Iris: going to sleep
+User: what's in front of me
+Iris: I do not know that command yet
+User: what is the sign say
+Iris: I do not know that command yet
+User: where am i
+Iris: I do not know that command yet
+User: go to sleep
+Iris: going to sleep

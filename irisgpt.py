@@ -1,6 +1,10 @@
 import speech_recognition as sr
 import pyttsx3
 import time
+import cv2 as cv
+import os
+from dotenv import load_dotenv
+import openai
 
 # Initialize globals and Python TTS engine
 engine = pyttsx3.init()
@@ -14,13 +18,17 @@ LOG = "log.txt"
 keywords = [("iris", 1), ("Iris", 1),]
 is_listening = False
 
+# Initialize OpenAI
+load_dotenv()
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
 # Wait to hear wake word and listen for command when wake detected
 def hear(rec, audio):
     try:
         print("word detected")
         # Use sphinx stt to reduce use of google stt
         text = rec.recognize_sphinx(audio, keyword_entries=keywords)
-        print(text)
+        # print(text)
         text = text.lower()
         if WAKE_WORD in text:
             print("listening")
@@ -51,12 +59,10 @@ def listen():
 
 # Takes in text from speech and determines which command to run
 def interpret(text):
-    if text is None:
-        return
-    
     f = open(LOG, "a")
     f.write("User: " + text + "\n")
     speak = "I do not know that command yet"
+
     if text == "go to sleep":
         speak = "going to sleep"
         f.write("Iris: " + speak + "\n")
@@ -69,30 +75,63 @@ def interpret(text):
         speak = "fine, thank you"
         f.write("Iris: " + speak + "\n")
     else:
-        f.write("Iris: " + speak + "\n")
+        
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {
+                    "role": "user",
+                    "content": text
+                }
+            ],
+            temperature=1,
+            max_tokens=128,
+            top_p=1,
+            frequency_penalty=0,
+            presence_penalty=0
+        )
+        f.write("Iris: " + response + "\n")
 
     f.close()
     # engine.say(speak)
     # engine.runAndWait()
+
+
+videoCapture = cv.VideoCapture(0, cv.CAP_DSHOW)
+videoCapture.set(cv.CAP_PROP_FRAME_WIDTH, 1920)
+videoCapture.set(cv.CAP_PROP_FRAME_HEIGHT, 1080)
 
 # Initialize speech recognizer and microphone
 rec = sr.Recognizer() 
 mic = sr.Microphone()
 with mic as source:
     # Adjust mic input for background noise
-    rec.adjust_for_ambient_noise(source)
-    rec.dynamic_energy_threshold = 3000
+    rec.adjust_for_ambient_noise(source, duration=2)
+    rec.dynamic_energy_threshold = True
 
 # Run hear function in a new thread to allow main function to run while listening in background
 stopper = rec.listen_in_background(mic, hear)
 is_listening = True
 while(True):
-    # print("doing main function things")
+    ret, frame = videoCapture.read()
+    if not ret:
+        break
+    
+    # cv.imshow("input", frame)
+
+    if cv.waitKey(1) == 27:
+        stopper()
+        engine.stop()
+        break
+
     if is_listening:
-        print("Currently listening")
+        # print("CL")
+        pass
     else:
         print("stopping listening and program")
         stopper()
         engine.stop()
         break
-    time.sleep(0.1)
+
+cv.destroyAllWindows() 
+videoCapture.release()
