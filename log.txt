@@ -6,3 +6,18 @@ User: go to sleep
 Iris: going to sleep
 --- Ended conversation ---
 
+--- Started on: 2023-09-03 ---
+User: play image
+Iris: play image
+--- Started on: 2023-09-03 ---
+User: analyze image
+User: go to sleep
+Iris: going to sleep
+--- Ended conversation ---
+
+--- Started on: 2023-09-04 ---
+User: analyze image
+User: go to sleep
+Iris: going to sleep
+--- Ended conversation ---
+

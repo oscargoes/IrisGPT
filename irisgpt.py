@@ -7,23 +7,27 @@ from dotenv import load_dotenv
 import openai
 import azure.ai.vision as sdk
 
-# Initialize globals and Python TTS engine
+# Initialize globals
 global frame
+WAKE_WORD = "iris"
+LOG = "log.txt"
+IMG = "frame.jpg"
+is_listening = False
+messages = []
+
+# Initialize Python TTS engine
 engine = pyttsx3.init()
 engine.setProperty("volume", 1.0)
 voices = engine.getProperty("voices")
 engine.setProperty("voice", voices[1].id)
-WAKE_WORD = "iris"
-LOG = "log.txt"
-IMG = "frame.jpg"
 
 # Initialize keywords for sphinx to focus on
 keywords = [("iris", 1), ("Iris", 1),]
-is_listening = False
 
 # Initialize OpenAI
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
+GPT_MODEL = "gpt-3.5-turbo"
 
 # Initialize Azure Computer Vision API
 service_options = sdk.VisionServiceOptions(os.getenv("AZURE_VISION_ENDPOINT"),
@@ -36,6 +40,8 @@ analysis_options.features = (
 )
 analysis_options.language = "en"
 analysis_options.gender_neutral_caption = False
+
+# --- Functions ---
 
 # Wait to hear wake word and listen for command when wake detected
 def hear(rec, audio):
@@ -57,8 +63,10 @@ def hear(rec, audio):
         pass
     except sr.UnknownValueError:
         print("Sphinx could not understand audio")
+        pass
     except sr.RequestError as e:
         print("Sphinx error; {0}".format(e))
+        pass
 
 # Listens for command after wake word and calls interpreter
 def listen():
@@ -90,75 +98,85 @@ def interpret(text):
             speak = "fine, thank you"
             f.write("Iris: " + speak + "\n")
         elif text == "analyze image":
-            cv.imwrite("frame.jpg", frame)
-            vision_source = sdk.VisionSource(filename=IMG)
-            image_analyzer = sdk.ImageAnalyzer(service_options, vision_source, analysis_options)
-            result = image_analyzer.analyze()
-            if result.reason == sdk.ImageAnalysisResultReason.ANALYZED:
-
-                print(" Image height: {}".format(result.image_height))
-                print(" Image width: {}".format(result.image_width))
-                print(" Model version: {}".format(result.model_version))
-
-                if result.dense_captions is not None:
-                    print(" Dense Captions:")
-                    for caption in result.dense_captions:
-                        print("   '{}', {}, Confidence: {:.4f}".format(caption.content, caption.bounding_box, caption.confidence))
-
-                if result.text is not None:
-                    print(" Text:")
-                    for line in result.text.lines:
-                        points_string = "{" + ", ".join([str(int(point)) for point in line.bounding_polygon]) + "}"
-                        print("   Line: '{}', Bounding polygon {}".format(line.content, points_string))
-                        for word in line.words:
-                            points_string = "{" + ", ".join([str(int(point)) for point in word.bounding_polygon]) + "}"
-                            print("     Word: '{}', Bounding polygon {}, Confidence {:.4f}"
-                                .format(word.content, points_string, word.confidence))
-
-                result_details = sdk.ImageAnalysisResultDetails.from_result(result)
-                print(" Result details:")
-                print("   Image ID: {}".format(result_details.image_id))
-                print("   Result ID: {}".format(result_details.result_id))
-                print("   Connection URL: {}".format(result_details.connection_url))
-                print("   JSON result: {}".format(result_details.json_result))
-
+            result = analyze_image()
+            if result is None:
+                f.write("Iris: " + "failed to analyze image" + "\n")
             else:
-
-                error_details = sdk.ImageAnalysisErrorDetails.from_result(result)
-                print(" Analysis failed.")
-                print("   Error reason: {}".format(error_details.reason))
-                print("   Error code: {}".format(error_details.error_code))
-                print("   Error message: {}".format(error_details.message))            
+                f.write("Iris: " + "image has been analyzed" + "\n")
         else:
-            # try:
-            #     conn = http.client.HTTPSConnection('*.cognitiveservices.azure.com')
-            #     conn.request("POST", "/computervision/imageanalysis:analyze?api-version=2023-02-01-preview&%s" % params, "{body}", headers)
-            #     response = conn.getresponse()
-            #     data = response.read()
-            #     print(data)
-            #     conn.close()
-            # except Exception as e:
-            #     print("[Errno {0}] {1}".format(e.errno, e.strerror))
-
-            # response = openai.ChatCompletion.create(
-            #     model="gpt-3.5-turbo",
-            #     messages=[
-            #         {
-            #             "role": "user",
-            #             "content": text
-            #         }
-            #     ],
-            #     temperature=1,
-            #     max_tokens=128,
-            #     top_p=1,
-            #     frequency_penalty=0,
-            #     presence_penalty=0
-            # )
-            f.write("Iris: " + text + "\n")
+            result = analyze_image()
+            if result is None:
+                f.write("Iris: " + text + "\n")
+            else:
+                captions = ""
+                if result.dense_captions is not None:
+                    for caption in result.dense_captions:
+                        captions += "'{}', {}, Confidence: {:.4f}".format(caption.content, caption.bounding_box, caption.confidence) + "\n"
+                gpt_output = gpt_analyze(text, captions)
+                f.write("Iris: " + gpt_output + "\n")
 
         f.close()
         # engine.say(speak)
         # engine.runAndWait()
+
+# Save and analyze current frame from camera with Azure AI
+def analyze_image():
+    cv.imwrite("frame.jpg", frame)
+    vision_source = sdk.VisionSource(filename=IMG)
+    image_analyzer = sdk.ImageAnalyzer(service_options, vision_source, analysis_options)
+    result = image_analyzer.analyze()
+    if result.reason == sdk.ImageAnalysisResultReason.ANALYZED:
+
+        # print(" Image height: {}".format(result.image_height))
+        # print(" Image width: {}".format(result.image_width))
+        # print(" Model version: {}".format(result.model_version))
+
+        if result.dense_captions is not None:
+            print(" Dense Captions:")
+            for caption in result.dense_captions:
+                print("   '{}', {}, Confidence: {:.4f}".format(caption.content, caption.bounding_box, caption.confidence))
+
+        if result.text is not None:
+            print(" Text:")
+            for line in result.text.lines:
+                points_string = "{" + ", ".join([str(int(point)) for point in line.bounding_polygon]) + "}"
+                print("   Line: '{}', Bounding polygon {}".format(line.content, points_string))
+                for word in line.words:
+                    points_string = "{" + ", ".join([str(int(point)) for point in word.bounding_polygon]) + "}"
+                    print("     Word: '{}', Bounding polygon {}, Confidence {:.4f}"
+                        .format(word.content, points_string, word.confidence))
+
+        # result_details = sdk.ImageAnalysisResultDetails.from_result(result)
+        # print(" Result details:")
+        # print("   Image ID: {}".format(result_details.image_id))
+        # print("   Result ID: {}".format(result_details.result_id))
+        # print("   Connection URL: {}".format(result_details.connection_url))
+        # print("   JSON result: {}".format(result_details.json_result))
+        return result
+
+    else:
+        error_details = sdk.ImageAnalysisErrorDetails.from_result(result)
+        print(" Analysis failed.")
+        print("   Error reason: {}".format(error_details.reason))
+        print("   Error code: {}".format(error_details.error_code))
+        print("   Error message: {}".format(error_details.message))    
+        return None        
+
+def gpt_analyze(text, captions):
+    
+    response = openai.ChatCompletion.create(
+        model=GPT_MODEL,
+        messages=messages,
+        max_tokens=100,
+        n=1,
+        stop=None,
+        temperature=0.5,
+    )
+
+    message = response.choices[0].message.content
+    # global messages
+    messages.append(response.choices[0].messsage)
+    return message
 
 
 # Initialize video feed
