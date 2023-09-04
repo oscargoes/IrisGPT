@@ -1,2 +1,5 @@
 # Ignore tokens
 .env
+
+# Ignore frame capture
+frame.jpg
